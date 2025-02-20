@@ -6,9 +6,9 @@ const lessonSchema = Schema({
         type:String,
         required:true,
     },
-    videoUrl:{
-        type:String,
-        required:true,
+    videoId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"uploads.files"
     },
     order:{
         type:Number,
@@ -23,7 +23,7 @@ const courseSchema = Schema({
     },
     description:{
         type:String,
-        required:true,
+        
     },
     price:{
         type:Number,
@@ -51,4 +51,4 @@ const courseSchema = Schema({
 },{Timestamp:true})
 
 const Course = mongoose.model("Course",courseSchema)
-module.exports = Course
+module.exports = {Course,Lesson}

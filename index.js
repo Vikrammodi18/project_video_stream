@@ -3,7 +3,7 @@ const multer = require("multer");
 const mongoose = require("mongoose");
 const { GridFSBucket } = require("mongodb");
 const path = require('path')
-const Course = require('./models/course.model.js')
+const {Course,Lesson} = require('./models/course.model.js')
 const app = express();
 const PORT = 3000;
 
@@ -19,7 +19,7 @@ const db = mongoose.connection;
 app.use(express.urlencoded({extended:false}))
 // GridFS Bucket
 let gridfsBucket;
-db.once("open", () => {
+db.once("open", () => { 
     gridfsBucket = new GridFSBucket(db.db, { bucketName: "uploads" });
     console.log("Connected to MongoDB GridFS");
 });
@@ -27,32 +27,30 @@ db.once("open", () => {
 // Multer setup (Only capturing request, no storage)
 const storage = multer.memoryStorage(); // No disk or memory storage
 const upload = multer({ storage });
-
 const indexPage = path.join('LECTURE',"/public/fronend/index.html")
 
 app.get('/home',(req,res)=>{
-   
     res.sendFile(path.join(__dirname,"/public/frontend/index.html"))
 })
-// ✅ **Upload Route (Multer + GridFS + Streams)**
-app.post("/upload", upload.single("file"), (req, res) => {
-    console.log(req.file)
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+// 
+// app.post("/upload", upload.single("file"), (req, res) => {
+//     // console.log(req.file)
+//     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    // Create a writable stream in GridFS
-    const writeStream = gridfsBucket.openUploadStream(req.file.originalname);
+//     // Create a writable stream in GridFS
+//     const writeStream = gridfsBucket.openUploadStream(req.file.originalname);
     
-    // Stream file buffer to GridFS
-    writeStream.end(req.file.buffer);
+//     // Stream file buffer to GridFS
+//     writeStream.end(req.file.buffer);
 
-    writeStream.on("finish", () => {
-        res.json({ message: "File uploaded successfully!", filename: req.file.originalname });
-    });
+//     writeStream.on("finish", () => {
+//         res.json({ message: "File uploaded successfully!", filename: req.file.originalname });
+//     });
 
-    writeStream.on("error", (err) => {
-        res.status(500).json({ error: err.message });
-    });
-});
+//     writeStream.on("error", (err) => {
+//         res.status(500).json({ error: err.message });
+//     });
+// });
 
 // ✅ **Download Route (Streaming File from GridFS)**
 
@@ -100,16 +98,49 @@ app.get("/file/:filename", async (req, res) => {
 
 app.get('/course',async (req,res)=>{
     let course = await Course.find({})
-    res.send(course)
+    res.send("course")
 })
 app.post('/course',async (req,res)=>{
-    
     let course1 = Course(req.body)
     await course1.save()
     res.redirect('/home')
 })
+// ✅ **Upload Route (Multer + GridFS + Streams)**
+app.post('/course/:id/lesson',upload.single("file"),async (req,res)=>{
 
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
+    // Create a writable stream in GridFS
+    const writeStream = gridfsBucket.openUploadStream(req.file.originalname);
+    
+    // Stream file buffer to GridFS
+    writeStream.end(req.file.buffer);
+
+    writeStream.on("finish",async () => {
+
+        const newLesson = new Lesson({
+            title:req.body.title,
+            order:req.body.order,
+            videoId:writeStream.id,
+        })
+        let {id} = req.params;
+        let course = await Course.findById(id)
+        course.lesson.push(newLesson)
+        await newLesson.save()
+        await course.save()
+        res.json({ message: "File uploaded successfully!", filename: req.file.originalname });
+    });
+
+    writeStream.on("error", (err) => {
+        res.status(500).json({ error: err.message });
+    });
+        
+})
+app.get('/course/:id/lesson', async (req,res)=>{
+    let {id} = req.params
+    let course = await Course.findById(id).populate('lesson')
+    res.send(course)
+})
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
