@@ -3,11 +3,12 @@ const multer = require("multer");
 const mongoose = require("mongoose");
 const { GridFSBucket } = require("mongodb");
 const path = require('path')
+const Course = require('./models/course.model.js')
 const app = express();
 const PORT = 3000;
 
-// app.use(express.static('public'))
-
+app.use(express.static('public'))
+app.use(express.urlencoded({extended:true}))
 // Connect to MongoDB
 mongoose.connect("mongodb://127.0.0.1:27017/videodb", {
     useNewUrlParser: true,
@@ -97,11 +98,16 @@ app.get("/file/:filename", async (req, res) => {
     }
 });
 
-
-
-    // const fileId = new mongoose.Types.ObjectId("67b6390ac4163b4abdf3ef35");
-    // const readStream = gridfsBucket.openDownloadStream(fileId);
-    // readStream.pipe(res); // Streams file back to client
+app.get('/course',async (req,res)=>{
+    let course = await Course.find({})
+    res.send(course)
+})
+app.post('/course',async (req,res)=>{
+    
+    let course1 = Course(req.body)
+    await course1.save()
+    res.redirect('/home')
+})
 
 
 // Start Server
@@ -110,27 +116,3 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 
 
-// const express = require('express');
-// const multer  = require('multer');
-// const {GridFsStorage} = require('multer-gridfs-storage');
-// const url = 'mongodb://127.0.0.1:27017/videoDB';
-// const path = require('path')
-// const storage = new GridFsStorage({ url });
-// const upload = multer({ storage });
-
-
-// const indexFile = path.join('LECTURE','public/frontend/index.html')
-// const app = express()
-// app.use(express.static('public'))
-// app.use(express.urlencoded({extended:false}))
-
-
-
-// app.get('/home',(req,res)=>{
-//     console.log()
-//     res.sendFile(`/${indexFile}`)
-// })
-
-// app.listen(3000,()=>{
-//     console.log("your app is runing")
-// })
